@@ -3,6 +3,8 @@ import axios from "axios";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { RegisterPageSkeleton } from "./Loader";
 import { readTokenFromLocalStorage } from "../Utils/auth";
+import discount3 from "../assets/discount2.png";
+import { getRandomOffer } from "../Utils/offers";
 
 const DEFAULT_IMG = "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=1200&q=80";
 const FALLBACK_IMAGES = [
@@ -25,6 +27,12 @@ export default function ProductDetail({ product: productProp }) {
     const [imageSrc, setImageSrc] = useState(
         initial ? initial.image || initial.logo || FALLBACK_IMAGES[Number(initial.id?.toString()?.split?.("-")?.pop ?? 0) % FALLBACK_IMAGES.length] || DEFAULT_IMG : null
     );
+
+    // single offer for this page load
+    const [singleOffer, setSingleOffer] = useState("");
+    useEffect(() => {
+        setSingleOffer(getRandomOffer());
+    }, []);
 
     useEffect(() => {
         if (product) return;
@@ -133,33 +141,32 @@ export default function ProductDetail({ product: productProp }) {
                 </div>
 
                 <div className="bg-white rounded-t-3xl -mt-8 p-5 shadow-lg flex-1 rounded-2xl relative">
-                    <div className="flex justify-between items-start">
+                    <div className="flex justify-between items-start ">
                         <div className="flex-1 pr-3">
-                            <h2 className="text-xl font-bold">{title}</h2>
-                            <p className="text-sm text-gray-500 mt-1">{address}</p>
-                            <div className="flex items-center gap-3 mt-3 text-xs text-amber-600">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline-block" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.974a1 1 0 00.95.69h4.178c.969 0 1.371 1.24.588 1.81l-3.382 2.458a1 1 0 00-.363 1.118l1.287 3.974c.3.921-.755 1.688-1.54 1.118l-3.382-2.458a1 1 0 00-1.176 0l-3.382 2.458c-.784.57-1.839-.197-1.54-1.118l1.287-3.974a1 1 0 00-.363-1.118L2.047 9.401c-.783-.57-.38-1.81.588-1.81h4.178a1 1 0 00.95-.69l1.286-3.974z" /></svg>
-                                <span className="text-gray-800">{rating}</span>
-                            </div>
+                            <h2 className="text font-bold">{title}</h2>
+                            <p className="text-[14px] text-gray-500 ">{address}</p>
                         </div>
 
-                        <div className="flex flex-col items-end">
-                            <div className="p-2 rounded-lg border">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.974a1 1 0 00.95.69h4.178c.969 0 1.371 1.24.588 1.81l-3.382 2.458a1 1 0 00-.363 1.118l1.287 3.974c.3.921-.755 1.688-1.54 1.118l-3.382-2.458a1 1 0 00-1.176 0l-3.382 2.458c-.784.57-1.839-.197-1.54-1.118l1.287-3.974a1 1 0 00-.363-1.118L2.047 9.401c-.783-.57-.38-1.81.588-1.81h4.178a1 1 0 00.95-.69l1.286-3.974z" /></svg>
+                        <div className="flex items-center justify-between">
+                            <div className="p-2 rounded-lg ">
+                                <i className="fa-regular fa-star text-gray-500"></i>
                             </div>
-                            <div className="text-sm text-gray-500 mt-2">4.5</div>
+                            <div className="text-sm text-gray-500 ">{rating}</div>
                         </div>
                     </div>
 
-                    <div className="mt-4 flex items-center gap-2 text-sm text-orange-500">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline-block" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.09 6.26L20 9l-5 3.64L16.18 19 12 15.77 7.82 19 9 12.64 4 9l5.91-.74L12 2z" /></svg>
-                        <span className="text-sm text-orange-500">{p.offers_text ?? (p.offers_count ? `${p.offers_count} Offers` : "Offers")}</span>
+                    {/* Offers row  */}
+                    <div className="mt-2 flex items-center gap-2 text-sm text-amber-600">
+                        <img src={discount3} alt="offer" className="h-4 w-4" />
+                        <span className="text-[12px] text-amber-600">
+                            {p.offers_text ? p.offers_text : p.offers_count ? `${p.offers_count} Offers` : singleOffer || "Offers available"}
+                        </span>
                     </div>
 
-                    <p className="mt-4 text-gray-600 leading-relaxed flex-1">{short || "Our delicious items are prepared fresh. Tap Add to Cart to order."}</p>
+                    <p className="mt-8 text-gray-600 leading-relaxed flex-1 text-sm">{short || "Our delicious items are prepared fresh. Tap Add to Cart to order."}</p>
 
-                    <div className="mt-6 flex gap-3 sticky bottom-0 bg-white pt-4">
-                        <button onClick={() => alert("Added to cart (demo)")} className="flex-1 bg-rose-500 hover:bg-rose-600 text-white py-3 rounded-xl font-semibold shadow">
+                    <div className="mt-18  flex gap-3 sticky bottom-0 bg-white pt-4">
+                        <button onClick={() => navigate("/underConstructionScreen")} className="flex-1 bg-rose-500 hover:bg-rose-600 text-white py-3 rounded-xl font-semibold shadow">
                             Add to cart
                         </button>
                         <button onClick={() => window.open(`tel:${p.contact_number ?? p.phone ?? ""}`)} className="w-14 h-14 rounded-xl border flex items-center justify-center" aria-label="call restaurant">

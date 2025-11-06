@@ -5,11 +5,14 @@ import { readTokenFromLocalStorage } from "./Utils/auth";
 import axios from "axios";
 import { RegisterPageSkeleton } from "./components/Loader";
 
+
+
 // Lazy load components
 const Register = lazy(() => import("./components/Register").then(m => ({ default: m.Register })));
 const HomeV2 = lazy(() => import("./components/HomeV2"));
 const ProductDetail = lazy(() => import("./components/ProductDetail"));
 const ProtectedRoutes = lazy(() => import("./components/ProtectedRoutes"));
+const PageUnderConstraction=lazy(()=>import("./components/PageUnderConstraction"))
 
 const App = () => {
   useEffect(() => {
@@ -21,6 +24,8 @@ const App = () => {
     }
   }, []);
 
+
+
   return (
     <>
       <Toaster />
@@ -31,10 +36,12 @@ const App = () => {
           <Route element={<ProtectedRoutes />}>
             <Route path="/home" element={<HomeV2 />} />
             <Route path="/product/:id" element={<ProductDetail />} />
+            <Route path="underConstructionScreen" element={<PageUnderConstraction/>}/>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
+      
     </>
   );
 };
