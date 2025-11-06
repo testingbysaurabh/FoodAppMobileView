@@ -11,6 +11,9 @@ export const Register = () => {
     return <div>{ui === 0 ? <RegisterPage /> : <OtpVerification />}</div>;
 };
 
+
+
+
 /* ---------- RegisterPage ---------- */
 export const RegisterPage = () => {
     const { phone, setPhone, setUi } = useGlobalContext();
@@ -99,7 +102,7 @@ export const RegisterPage = () => {
 /* ---------- OtpVerification ---------- */
 export const OtpVerification = () => {
     const inputRef = useRef([]);
-    const { phone, setUi } = useGlobalContext();
+    const { phone, setUi,setPhone } = useGlobalContext();
     const [otp, setOtp] = useState(Array(6).fill(""));
     const [loading, setLoading] = useState(false);
     const [resendLoading, setResendLoading] = useState(false);
@@ -169,6 +172,8 @@ export const OtpVerification = () => {
 
                 toast.success("OTP verified successfully!");
                 navigate("/home");
+                setUi(0)
+                setPhone("")
             } else {
                 const message = response?.data?.message || "Invalid OTP. Please try again.";
                 setVerifyError(message);
