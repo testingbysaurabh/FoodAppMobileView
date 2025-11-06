@@ -2,7 +2,9 @@ import axios from "axios";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { RegisterPageSkeleton } from "./Loader";
-import { readTokenFromLocalStorage, removeTokenFromLocalStorage } from "../Utils/auth";
+import { readTokenFromLocalStorage, removeTokenFromLocalStorage, } from "../Utils/auth";
+import discount3 from "../assets/discount2.png";
+import { getRandomOffer } from "../Utils/offers";
 
 const FALLBACK_IMAGES = [
   "https://images.unsplash.com/photo-1551218808-94e220e084d2?auto=format&fit=crop&w=400&q=80",
@@ -20,26 +22,20 @@ const FALLBACK_IMAGES = [
 const safeImageUrl = (url) => {
   if (!url) return null;
   const trimmed = String(url).trim();
-  if (trimmed.startsWith("http://")) return trimmed.replace(/^http:\/\//i, "https://");
-  return trimmed;
+  return trimmed.startsWith("http://")
+    ? trimmed.replace(/^http:\/\//i, "https://")
+    : trimmed;
 };
 
-
-
 const normalizeItem = (r = {}, idx = 0) => {
-  let image = null;
-  if (r.logo) image = r.logo;
-  else if (r.cover_image) image = r.cover_image;
-  else if (r.image) image = r.image;
-  else if (Array.isArray(r.images) && r.images.length > 0) {
-    const first = r.images[0];
-    image = typeof first === "string" ? first : first?.url ?? first?.secure_url ?? null;
-  }
+  let image = r.logo || r.cover_image || r.image || (Array.isArray(r.images) && r.images.length > 0 ?
+    typeof r.images[0] === "string" ? r.images[0] : r.images[0]?.url ?? r.images[0]?.secure_url : null);
 
   image = safeImageUrl(image) || FALLBACK_IMAGES[idx % FALLBACK_IMAGES.length];
 
   let address = r.address_complete ?? r.restaurant_address ?? r.address ?? "";
   if (address === "null") address = "";
+
   const id = String(r.restaurant_id ?? r.id ?? `r-${idx}`);
 
   return {
@@ -53,7 +49,10 @@ const normalizeItem = (r = {}, idx = 0) => {
   };
 };
 
-/* Carousel component */
+
+
+
+
 const Carousel = ({ slides = [], onCardClick }) => {
   const [index, setIndex] = useState(0);
   const sliderRef = useRef(null);
@@ -66,16 +65,17 @@ const Carousel = ({ slides = [], onCardClick }) => {
     const el = sliderRef.current;
     if (!el) return;
     const child = el.children[index];
-    if (child) {
-      el.scrollTo({ left: child.offsetLeft - 12, behavior: "smooth" });
-    }
+    if (child) el.scrollTo({ left: child.offsetLeft - 12, behavior: "smooth" });
   }, [index, slides.length]);
+
 
   useEffect(() => {
     const el = sliderRef.current;
     if (!el) return;
+
     let startX = 0,
       delta = 0;
+
     const onStart = (e) => (startX = e.touches ? e.touches[0].clientX : e.clientX);
     const onMove = (e) => (delta = (e.touches ? e.touches[0].clientX : e.clientX) - startX);
     const onEnd = () => {
@@ -83,12 +83,14 @@ const Carousel = ({ slides = [], onCardClick }) => {
       else if (delta < -50) setIndex((i) => Math.min(slides.length - 1, i + 1));
       delta = 0;
     };
+
     el.addEventListener("touchstart", onStart, { passive: true });
     el.addEventListener("touchmove", onMove, { passive: true });
     el.addEventListener("touchend", onEnd);
     el.addEventListener("mousedown", onStart);
     el.addEventListener("mousemove", onMove);
     el.addEventListener("mouseup", onEnd);
+
     return () => {
       el.removeEventListener("touchstart", onStart);
       el.removeEventListener("touchmove", onMove);
@@ -99,20 +101,29 @@ const Carousel = ({ slides = [], onCardClick }) => {
     };
   }, [slides.length]);
 
+
   return (
     <div>
-      <div ref={sliderRef} className="flex gap-4 overflow-x-auto no-scrollbar pb-2 px-4" style={{ scrollSnapType: "x mandatory" }}>
+      <div
+        ref={sliderRef}
+        className="flex gap-4 overflow-x-auto no-scrollbar scroll-smooth pb-2 px-4"
+        style={{ scrollSnapType: "x mandatory" }}
+      >
         {slides.map((s, i) => (
           <div
             key={s.id}
-            className="min-w-[260px] w-[260px] rounded-2xl overflow-hidden shadow-lg relative cursor-pointer"
-            style={{ transform: i === index ? "scale(1)" : "scale(0.96)", transition: "transform 250ms ease", scrollSnapAlign: "center" }}
-            onClick={() => onCardClick && onCardClick(s)}
+            className="min-w-[120px] w-[120px] rounded-2xl overflow-hidden shadow-lg cursor-pointer relative"
+            style={{
+              transform: i === index ? "scale(1)" : "scale(0.96)",
+              transition: "transform 250ms ease",
+              scrollSnapAlign: "center",
+            }}
+            onClick={() => onCardClick?.(s)}
           >
             <img
               src={s.image}
               alt={s.name}
-              className="w-full h-40 object-cover bg-gray-100"
+              className="w-full h-30 object-cover bg-gray-100"
               onError={(e) => {
                 const el = e.currentTarget;
                 if (el.dataset.failed) return;
@@ -130,20 +141,29 @@ const Carousel = ({ slides = [], onCardClick }) => {
 
       <div className="flex items-center justify-center gap-2 mt-3">
         {slides.map((_, i) => (
-          <button key={i} onClick={() => setIndex(i)} className={`w-2 h-2 rounded-full ${i === index ? "bg-gray-800" : "bg-gray-300"}`} aria-label={`Go to slide ${i + 1}`} />
+          <button
+            key={i}
+            onClick={() => setIndex(i)}
+            className={`w-2 h-2 rounded-full ${i === index ? "bg-gray-800" : "bg-gray-300"
+              }`}
+            aria-label={`Go to slide ${i + 1}`}
+          />
         ))}
       </div>
     </div>
   );
 };
 
-/* BannerSlider */
 const BannerSlider = ({ images = [], interval = 3500 }) => {
   const [idx, setIdx] = useState(0);
+
   useEffect(() => {
-    if (!images || images.length === 0) return;
-    const t = setInterval(() => setIdx((i) => (i + 1) % images.length), interval);
-    return () => clearInterval(t);
+    if (!images.length) return;
+    const timer = setInterval(
+      () => setIdx((i) => (i + 1) % images.length),
+      interval
+    );
+    return () => clearInterval(timer);
   }, [images, interval]);
 
   return (
@@ -153,7 +173,8 @@ const BannerSlider = ({ images = [], interval = 3500 }) => {
           key={i}
           src={img}
           alt={`banner-${i}`}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${i === idx ? "opacity-100" : "opacity-0"}`}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${i === idx ? "opacity-100" : "opacity-0"
+            }`}
           onError={(e) => {
             const el = e.currentTarget;
             if (el.dataset.failed) return;
@@ -164,17 +185,17 @@ const BannerSlider = ({ images = [], interval = 3500 }) => {
       ))}
       <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-2">
         {images.map((_, i) => (
-          <span key={i} className={`w-2 h-2 rounded-full ${i === idx ? "bg-white" : "bg-white/50"}`} />
+          <span
+            key={i}
+            className={`w-2 h-2 rounded-full ${i === idx ? "bg-white" : "bg-white/50"
+              }`}
+          />
         ))}
       </div>
     </div>
   );
 };
 
-
-
-
-/* ---------- HomeV2 main ---------- */
 const HomeV2 = () => {
   const navigate = useNavigate();
   const [restaurants, setRestaurants] = useState([]);
@@ -183,76 +204,103 @@ const HomeV2 = () => {
 
   const LogOutHandler = () => {
     removeTokenFromLocalStorage();
-    navigate('/', { replace: true });
+    navigate("/", { replace: true });
   };
 
   useEffect(() => {
     let mounted = true;
-    async function GetData() {
+
+    const fetchRestaurants = async () => {
       setLoading(true);
       setError(null);
       try {
         const token = readTokenFromLocalStorage();
-        const res = await axios.get("https://staging.fastor.ai/v1/m/restaurant", {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-          params: { city_id: 118 },
-          timeout: 10000,
-        });
+        const res = await axios.get(
+          "https://staging.fastor.ai/v1/m/restaurant",
+          {
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+            params: { city_id: 118 },
+            timeout: 10000,
+          }
+        );
 
         const raw = res?.data?.data?.results ?? res?.data?.results ?? [];
-        const normalized = Array.isArray(raw) ? raw.map((r, i) => normalizeItem(r, i)) : [];
+        const normalized = Array.isArray(raw) ? raw.map(normalizeItem) : [];
         if (mounted) setRestaurants(normalized);
       } catch (err) {
         console.error("Error fetching restaurants:", err);
-        if (mounted) setError("Failed to fetch restaurants. Check console for details.");
+        if (mounted)
+          setError("Failed to fetch restaurants. Check console for details.");
       } finally {
         if (mounted) setLoading(false);
       }
-    }
+    };
 
-    GetData();
+    fetchRestaurants();
+
     return () => {
       mounted = false;
     };
   }, []);
 
-  const openProduct = (product) => {
-    navigate(`/product/${product.id}`, { state: { product } });
-  };
+  const openProduct = (product) => { navigate(`/product/${product.id}`, { state: { product } }); };
 
-  const slideItems = restaurants.length
-    ? restaurants.slice(0, 5)
-    : FALLBACK_IMAGES.slice(0, 5).map((img, i) => ({ id: `fallback-${i}`, name: "Suggested", image: img, address: "Connaught Place" }));
+  const slideItems =
+    restaurants.length > 0
+      ? restaurants.slice(0, 5)
+      : FALLBACK_IMAGES.slice(0, 5).map((img, i) => ({
+        id: `fallback-${i}`,
+        name: "Suggested",
+        image: img,
+        address: "Connaught Place",
+      }));
 
   const bannerImgs = FALLBACK_IMAGES.slice(5, 10);
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-gray-50">
       <div className="w-[375px] h-[812px] bg-white shadow-2xl overflow-auto border border-gray-200 flex flex-col">
-        <nav className="p-4 shadow-2xl flex items-center justify-between">
+
+        <nav className="sticky top-0 z-30 bg-white p-4 shadow-2xl flex items-center justify-between">
           <div>
-            <p className="text-xs text-gray-400">Pre Order From <i className="fa-solid fa-location-dot text-[8px]" /></p>
+            <p className="text-xs text-gray-400">
+              Pre Order From{" "}
+              <i className="fa-solid fa-location-dot text-[8px]" />
+            </p>
             <p className="font-bold">Connaught Place</p>
           </div>
-          <i id="logout" onClick={LogOutHandler} className="fa-solid fa-arrow-right-from-bracket cursor-pointer"></i>
+          <i
+            id="logout"
+            onClick={LogOutHandler}
+            className="fa-solid fa-arrow-right-from-bracket cursor-pointer"
+          ></i>
         </nav>
 
         <div className="p-4">
           <div className="flex gap-3 mb-4">
             <div className="w-1/2 bg-gray-50 rounded-2xl p-4">
               <p className="font-bold text-lg text-gray-500">Hey</p>
-              <p className="text-sm font-bold text-gray-900">Let's explore this evening</p>
+              <p className="text-sm font-bold text-gray-900">
+                Let's explore this evening
+              </p>
             </div>
 
             <div className="w-1/2 flex justify-around items-center">
-              <div className="flex flex-col items-center">
-                <div className="bg-linear-to-tr from-orange-300 to-orange-500 rounded-2xl p-4 shadow">
+              <div className="flex flex-col items-center cursor-pointer">
+                <div
+                  onClick={() => navigate("/underConstructionScreen")}
+                  className="bg-gradient-to-tr from-orange-300 to-orange-500 rounded-2xl p-4 shadow"
+                >
                   <i className="fa-solid fa-percent text-white" />
                 </div>
                 <p className="text-xs mt-2 text-gray-600">Offers</p>
               </div>
-              <div className="flex flex-col items-center">
-                <div className="bg-linear-to-tr from-sky-300 to-sky-500 rounded-2xl p-4 shadow">
+
+              <div className="flex flex-col items-center cursor-pointer">
+                <div
+                  onClick={() => navigate("/underConstructionScreen")}
+                  className="bg-gradient-to-tr from-sky-300 to-sky-500 rounded-2xl p-4 shadow"
+                >
                   <i className="fa-solid fa-wallet text-white" />
                 </div>
                 <p className="text-xs mt-2 text-gray-600">Wallet</p>
@@ -261,13 +309,23 @@ const HomeV2 = () => {
           </div>
 
           <div className="mb-3">
-            <div className="flex justify-between items-center mb-2 px-1">
+            <div className="flex justify-between items-center mb-2 px-1 mt-10">
               <h2 className="font-bold text-lg">Your Taste</h2>
+              {/* <button
+                id="seeall"
+                onClick={() => { }}
+                className="text-gray-400 text-[14px] cursor-pointer"
+              >
+                see all{" "}
+                <i className="fa-solid fa-circle-chevron-right text-[#d5d8dd]" />
+              </button> */}
             </div>
 
             {loading && <RegisterPageSkeleton />}
             {error && <p className="text-red-500">{error}</p>}
-            {!loading && !error && <Carousel slides={slideItems} onCardClick={openProduct} />}
+            {!loading && !error && (
+              <Carousel slides={slideItems} onCardClick={openProduct} />
+            )}
           </div>
 
           <BannerSlider images={bannerImgs} interval={3500} />
@@ -275,30 +333,40 @@ const HomeV2 = () => {
           <div className="mt-6">
             <h2 className="font-bold mb-4">Popular Ones</h2>
             {loading && <RegisterPageSkeleton />}
-            {!loading && !error && restaurants.map((r, i) => (
-              <div key={r.id} className="flex items-center gap-4 mb-3 cursor-pointer" onClick={() => openProduct(r)}>
-                <img
-                  src={r.image}
-                  alt={r.name}
-                  className="w-20 h-20 rounded-lg object-cover bg-gray-100"
-                  onError={(e) => {
-                    const el = e.currentTarget;
-                    if (el.dataset.failed) return;
-                    el.dataset.failed = "1";
-                    el.src = FALLBACK_IMAGES[i % FALLBACK_IMAGES.length];
-                  }}
-                />
-                <div>
-                  <h3 className="font-semibold">{r.name}</h3>
-                  <p className="text-xs text-gray-500">{r.address}</p>
-                  <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
-                    <span>★ 4.5</span>
-                    <span>•</span>
-                    <span>₹{20 * i + 100}</span>
+            {!loading &&
+              !error &&
+              restaurants.map((r, i) => (
+                <div
+                  key={r.id}
+                  className="flex items-center gap-4 mb-3 cursor-pointer"
+                  onClick={() => openProduct(r)}
+                >
+                  <img
+                    src={r.image}
+                    alt={r.name}
+                    className="w-20 h-20 rounded-lg object-cover bg-gray-100"
+                    onError={(e) => {
+                      const el = e.currentTarget;
+                      if (el.dataset.failed) return;
+                      el.dataset.failed = "1";
+                      el.src = FALLBACK_IMAGES[i % FALLBACK_IMAGES.length];
+                    }}
+                  />
+                  <div>
+                    <h3 className="font-semibold">{r.name}</h3>
+                    <p className="text-xs text-gray-500">{r.address}</p>
+                    <p className="text-xs text-amber-600 py-1 flex items-center gap-1">
+                      <img className="h-3 w-3" src={discount3} alt="" />
+                      {getRandomOffer()}
+                    </p>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+                      <span>★ 4.5</span>
+                      <span>•</span>
+                      <span>₹{20 * i + 100}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         </div>
 
